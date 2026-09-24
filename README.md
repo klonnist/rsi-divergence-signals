@@ -106,8 +106,9 @@ Doğrudan erişim mümkün değilse (ağ engeli vb.) **yedek yöntem** kullanıl
 
 1. `js/config.js` → `DATA_SOURCE: 'static'` (yalnızca yedek veri) veya `'auto'` (önce doğrudan dener,
    olmazsa yedeğe düşer). Commit + push.
-2. GitHub → **Actions** → **"OKX verisini güncelle (yedek yöntem)"** → workflow devre dışıysa
-   **Enable workflow**, ilk doldurma için **Run workflow**.
+2. GitHub → **Actions** → **"OKX verisini güncelle (yedek yöntem)"** → **Enable workflow**, ardından
+   güncel veri için **Run workflow**. (Doğrudan mod çalıştığı için bu workflow başlangıçta devre dışı
+   bırakıldı; terminalden: `gh workflow enable fetch-data.yml`.)
 
 `.github/workflows/fetch-data.yml` her 15 dakikada `scripts/fetch-data.js`'i çalıştırır, sonuçları
 `data/` klasörüne JSON olarak yazar ve **`data` dalına** commit eder, ardından Pages'i yeniden yayınlar.

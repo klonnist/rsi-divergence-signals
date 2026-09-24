@@ -45,6 +45,9 @@ jobs:
           mkdir -p _site
           cp index.html backtest.html _site/
           cp -r css js _site/
+          # Önbellek kırıcı: ?v=dev → ?v=<commit>. Pages dosyaları 10 dk önbelleğe aldırır;
+          # böylece her yayında tarayıcı yeni CSS/JS'i alır, eski ve yeni dosyalar karışmaz.
+          sed -i "s/?v=dev/?v=${GITHUB_SHA::7}/g" _site/index.html _site/backtest.html
           # Yedek yöntem kullanılıyorsa data dalındaki JSON dosyalarını da ekle
           if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
             git fetch --depth=1 origin data
