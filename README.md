@@ -178,8 +178,10 @@ npx serve .
 
 Testler: RSI'ın referans tabloyla eşleşmesi, ATR/EMA, pivot ve uyumsuzluk kuralları, **lookahead
 olmadığı** (kısaltılmış veride üretilen sinyallerin tam veridekilerle aynı olması), SL/TP seviyeleri,
-çıkış kuralları (aynı mumda SL önceliği, kısmi TP, gap) ve backtest muhasebesi (komisyon, slippage,
-kaldıraç sınırı, metrikler). GitHub Actions her push'ta testleri çalıştırır; geçmezse site yayınlanmaz.
+çıkış kuralları (aynı mumda SL önceliği, kısmi TP, gap), backtest muhasebesi (komisyon, slippage,
+kaldıraç sınırı, metrikler) ve OKX istemcisi (sahte fetch ile sayfalama, önbellek, iptal edip kaldığı
+yerden devam, 429 sonrası yeniden deneme). GitHub Actions her push'ta testleri çalıştırır; geçmezse
+site yayınlanmaz.
 
 ## Yayınlama
 
