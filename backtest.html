@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b0f16" />
+    <meta
+      name="description"
+      content="RSI uyumsuzluk stratejisinin OKX geçmiş verisiyle backtest'i: getiri, kazanma oranı, profit factor, max drawdown, Sharpe ve işlem listesi."
+    />
+    <title>Backtest · RSI Uyumsuzluk Radarı</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231e2835'/%3E%3Cpath d='M6 20 12 13l5 4 9-9' fill='none' stroke='%2326a69a' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M6 25l20-4' stroke='%23ef5350' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body data-page="backtest">
+    <a class="skip" href="#main">İçeriğe geç</a>
+
+    <header class="topbar">
+      <a class="brand" href="index.html">
+        <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#1e2835" />
+          <path d="M6 20 12 13l5 4 9-9" fill="none" stroke="#26a69a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M6 25l20-4" stroke="#ef5350" stroke-width="2.4" stroke-linecap="round" />
+        </svg>
+        <span>RSI Uyumsuzluk Radarı</span>
+      </a>
+      <nav class="nav" aria-label="Sayfalar">
+        <a href="index.html">Sinyal Paneli</a>
+        <a href="backtest.html" aria-current="page">Backtest</a>
+      </nav>
+      <div class="source" id="source-status" role="status" aria-live="polite">
+        <span class="dot busy"></span><span class="txt">Bağlanıyor…</span>
+      </div>
+    </header>
+
+    <main id="main" class="container">
+      <section class="page-head">
+        <div>
+          <h1>Backtest</h1>
+          <p class="sub">Sinyal paneliyle aynı strateji fonksiyonu · OKX geçmiş mumları · portföy simülasyonu</p>
+        </div>
+      </section>
+
+      <div id="alerts" class="alerts" aria-live="polite"></div>
+
+      <div class="bt-layout">
+        <form class="card bt-form" id="bt-form" novalidate>
+          <fieldset>
+            <legend>Piyasa</legend>
+            <div class="field">
+              <span>Coinler</span>
+              <div class="chips" id="bt-coins"></div>
+              <div class="chip-actions">
+                <button class="btn small ghost" type="button" id="coins-all">Tümünü seç</button>
+                <button class="btn small ghost" type="button" id="coins-none">Temizle</button>
+              </div>
+            </div>
+            <div class="grid-2" style="margin-top: 10px">
+              <label class="field">
+                <span>Zaman dilimi</span>
+                <select id="bt-tf"></select>
+              </label>
+              <label class="field">
+                <span>İşlem yönü</span>
+                <select id="bt-dir">
+                  <option value="both">BUY + SELL</option>
+                  <option value="long">Yalnızca BUY</option>
+                  <option value="short">Yalnızca SELL</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Başlangıç (UTC)</span>
+                <input type="date" id="bt-start" required />
+              </label>
+              <label class="field">
+                <span>Bitiş (UTC)</span>
+                <input type="date" id="bt-end" required />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Sermaye ve maliyetler</legend>
+            <div class="grid-2">
+              <label class="field">
+                <span>Başlangıç sermayesi (USDT)</span>
+                <input type="number" id="bt-capital" min="1" step="any" inputmode="decimal" />
+              </label>
+              <label class="field">
+                <span>İşlem başına risk (%)</span>
+                <input type="number" id="bt-risk" min="0.01" max="100" step="0.1" inputmode="decimal" />
+              </label>
+              <label class="field">
+                <span>Komisyon (%)</span>
+                <input type="number" id="bt-comm" min="0" max="5" step="0.01" inputmode="decimal" />
+              </label>
+              <label class="field">
+                <span>Slippage (%)</span>
+                <input type="number" id="bt-slip" min="0" max="5" step="0.01" inputmode="decimal" />
+              </label>
+              <label class="field">
+                <span>Maks. kaldıraç (×)</span>
+                <input type="number" id="bt-lev" min="0.1" max="100" step="0.5" inputmode="decimal" />
+                <span class="hint">Açık pozisyonların toplamı ≤ sermaye × bu değer</span>
+              </label>
+              <label class="field">
+                <span>Kâr alma</span>
+                <select id="bt-exit">
+                  <option value="partial">TP1'de yarısı + SL girişe, kalan TP2</option>
+                  <option value="tp1">Tamamı TP1'de</option>
+                  <option value="tp2">Tamamı TP2'de</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Strateji</legend>
+            <div class="grid-2">
+              <label class="field">
+                <span>RSI periyodu</span>
+                <input type="number" id="bt-rsi" min="2" max="100" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>ATR çarpanı (SL)</span>
+                <input type="number" id="bt-atr" min="0" max="10" step="0.1" inputmode="decimal" />
+              </label>
+              <label class="field">
+                <span>Pivot sol (mum)</span>
+                <input type="number" id="bt-pl" min="1" max="50" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>Pivot sağ (mum)</span>
+                <input type="number" id="bt-pr" min="1" max="50" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>Pivotlar arası en az</span>
+                <input type="number" id="bt-min" min="1" max="500" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>Pivotlar arası en çok</span>
+                <input type="number" id="bt-max" min="1" max="500" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>BUY: RSI2 &lt;</span>
+                <input type="number" id="bt-bull" min="0" max="100" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>SELL: RSI2 &gt;</span>
+                <input type="number" id="bt-bear" min="0" max="100" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>TP1 (R)</span>
+                <input type="number" id="bt-tp1" min="0.1" max="20" step="0.1" inputmode="decimal" />
+              </label>
+              <label class="field">
+                <span>TP2 (R)</span>
+                <input type="number" id="bt-tp2" min="0.1" max="50" step="0.1" inputmode="decimal" />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Filtreler</legend>
+            <div class="stack">
+              <label class="switch"><input type="checkbox" id="bt-hidden" /><span>Gizli uyumsuzlukları da kullan</span></label>
+              <div class="grid-2" style="align-items: center">
+                <label class="switch"><input type="checkbox" id="bt-ema" /><span>EMA trend filtresi</span></label>
+                <label class="field">
+                  <span class="sr-only">EMA periyodu</span>
+                  <input type="number" id="bt-emap" min="2" max="1000" step="1" inputmode="numeric" aria-label="EMA periyodu" />
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <div class="form-error" id="form-error" role="alert"></div>
+            <div class="estimate" id="estimate"></div>
+            <div class="row">
+              <button class="btn primary" type="submit" id="run-btn">▶ Backtest'i çalıştır</button>
+              <button class="btn" type="button" id="cancel-btn" disabled>İptal</button>
+            </div>
+            <button class="btn ghost small" type="button" id="reset-btn">Varsayılanlara dön</button>
+          </div>
+        </form>
+
+        <section class="stack" id="bt-output" aria-live="polite">
+          <div class="card empty-state" id="bt-empty">
+            <h2>Parametreleri seçip backtest'i çalıştırın</h2>
+            <p>
+              Geçmiş mumlar OKX'ten sayfa sayfa (istek başına <span data-cfg-root="HISTORY_LIMIT">100</span> mum) çekilir;
+              uzun aralıklar birkaç dakika sürebilir. Aynı oturumda indirilen veri önbellekte tutulur, parametreleri değiştirip
+              tekrar çalıştırmak anında sonuç verir.
+            </p>
+          </div>
+
+          <div class="card progress hidden" id="bt-progress">
+            <div class="progress-top">
+              <b id="prog-label">Veri indiriliyor…</b>
+              <span class="muted" id="prog-pct">0%</span>
+            </div>
+            <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="prog-bar-wrap">
+              <span id="prog-bar"></span>
+            </div>
+            <div class="muted" style="margin-top: 8px; font-size: 12px" id="prog-detail"></div>
+          </div>
+
+          <div class="stack hidden" id="bt-results">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>Sonuçlar</h2>
+                  <p id="res-summary"></p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="metrics" id="bt-metrics"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>Sermaye eğrisi</h2>
+                  <p>Mum kapanışlarında açık pozisyonlar dahil piyasa değeri · alt panelde tepe noktasından düşüş (%)</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-legend" id="equity-legend"></div>
+                <div class="chart-box sm" id="equity-chart"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>İşlemler grafikte</h2>
+                  <p>▲/▼ giriş, ● çıkış (TP yeşil, SL kırmızı, başa baş sarı) · tablodaki bir işleme tıklayınca seviyeleri çizilir</p>
+                </div>
+                <div class="chart-tools">
+                  <label class="sr-only" for="trade-coin">Coin</label>
+                  <select id="trade-coin"></select>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-legend" id="trade-legend"></div>
+                <div class="chart-box" id="trade-chart"></div>
+              </div>
+            </div>
+
+            <div class="card table-card">
+              <div class="card-head">
+                <div>
+                  <h2>Coin bazında</h2>
+                  <p>Al-tut: test aralığındaki ilk açılıştan son kapanışa fiyat değişimi</p>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Coin</th>
+                      <th scope="col" class="num">İşlem</th>
+                      <th scope="col" class="num">Kazanma</th>
+                      <th scope="col" class="num">PnL (USDT)</th>
+                      <th scope="col" class="num">Profit factor</th>
+                      <th scope="col" class="num">Ort. R</th>
+                      <th scope="col" class="num">Al-tut</th>
+                    </tr>
+                  </thead>
+                  <tbody id="inst-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card table-card">
+              <div class="card-head">
+                <div>
+                  <h2>İşlem listesi</h2>
+                  <p id="trades-count"></p>
+                </div>
+                <button class="btn" type="button" id="csv-btn">⬇ CSV indir</button>
+              </div>
+              <div class="table-wrap">
+                <table class="table" id="trades-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" class="num">#</th>
+                      <th scope="col">Coin</th>
+                      <th scope="col">Yön</th>
+                      <th scope="col">Giriş zamanı</th>
+                      <th scope="col" class="num">Giriş</th>
+                      <th scope="col" class="num">SL</th>
+                      <th scope="col" class="num">TP1</th>
+                      <th scope="col" class="num">TP2</th>
+                      <th scope="col">Çıkış zamanı</th>
+                      <th scope="col" class="num">Ort. çıkış</th>
+                      <th scope="col">Sonuç</th>
+                      <th scope="col" class="num">PnL (USDT)</th>
+                      <th scope="col" class="num">R</th>
+                      <th scope="col" class="num">Skor</th>
+                    </tr>
+                  </thead>
+                  <tbody id="trades-body"></tbody>
+                </table>
+              </div>
+              <div class="table-foot" id="trades-foot"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p class="disclaimer">⚠ Bu site yatırım tavsiyesi değildir.</p>
+      <p>
+        Backtest sonuçları geçmiş veriye dayalı bir simülasyondur; gerçek işlemlerde kayma, likidite ve emir gerçekleşmesi farklı
+        olabilir. Geçmiş performans gelecekteki sonuçları garanti etmez.
+      </p>
+      <p>
+        Veri: <a href="https://www.okx.com/docs-v5/en/" rel="noopener" target="_blank">OKX Public API</a> · Grafikler:
+        <a href="https://www.tradingview.com/lightweight-charts/" rel="noopener" target="_blank">TradingView Lightweight Charts™</a>
+        · <a id="repo-link" href="#" rel="noopener" target="_blank">Kaynak kod</a>
+      </p>
+    </footer>
+
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"
+      integrity="sha384-KkYqTZlM13Zya6fVUF3IGCBOQ1ehFeJVVgxaVvD/0MebineF9EI8Jkd3NnWNChqN"
+      crossorigin="anonymous"
+    ></script>
+    <script defer src="js/config.js"></script>
+    <script defer src="js/indicators.js"></script>
+    <script defer src="js/divergence.js"></script>
+    <script defer src="js/signals.js"></script>
+    <script defer src="js/backtest.js"></script>
+    <script defer src="js/okx.js"></script>
+    <script defer src="js/ui.js"></script>
+  </body>
+</html>

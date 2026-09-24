@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b0f16" />
+    <meta
+      name="description"
+      content="OKX verisiyle 15 coin × 15m/4H/1D için RSI pozitif ve negatif uyumsuzluk sinyalleri: giriş, stop (SL) ve hedef (TP) seviyeleri."
+    />
+    <title>Sinyal Paneli · RSI Uyumsuzluk Radarı</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231e2835'/%3E%3Cpath d='M6 20 12 13l5 4 9-9' fill='none' stroke='%2326a69a' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M6 25l20-4' stroke='%23ef5350' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body data-page="signals">
+    <a class="skip" href="#main">İçeriğe geç</a>
+
+    <header class="topbar">
+      <a class="brand" href="index.html">
+        <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#1e2835" />
+          <path d="M6 20 12 13l5 4 9-9" fill="none" stroke="#26a69a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M6 25l20-4" stroke="#ef5350" stroke-width="2.4" stroke-linecap="round" />
+        </svg>
+        <span>RSI Uyumsuzluk Radarı</span>
+      </a>
+      <nav class="nav" aria-label="Sayfalar">
+        <a href="index.html" aria-current="page">Sinyal Paneli</a>
+        <a href="backtest.html">Backtest</a>
+      </nav>
+      <div class="source" id="source-status" role="status" aria-live="polite">
+        <span class="dot busy"></span><span class="txt">Bağlanıyor…</span>
+      </div>
+    </header>
+
+    <main id="main" class="container">
+      <section class="page-head">
+        <div>
+          <h1>Sinyal Paneli</h1>
+          <p class="sub">
+            RSI ile fiyat arasındaki pozitif (BUY) ve negatif (SELL) uyumsuzluklar ·
+            <span id="coin-count">15</span> coin × <span id="tf-list">15m / 4H / 1D</span> · OKX spot
+          </p>
+        </div>
+        <div class="head-actions">
+          <span class="muted" id="last-update"></span>
+          <button class="btn" id="refresh-btn" type="button">↻ Yenile</button>
+        </div>
+      </section>
+
+      <div id="alerts" class="alerts" aria-live="polite"></div>
+
+      <section class="tiles" aria-label="Özet">
+        <div class="tile">
+          <div class="tile-label"><span class="side buy"><span class="arrow">▲</span>BUY</span> açık</div>
+          <div class="tile-value" id="t-buy">—</div>
+          <div class="tile-sub">Giriş bekleyen + pozisyonda</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label"><span class="side sell"><span class="arrow">▼</span>SELL</span> açık</div>
+          <div class="tile-value" id="t-sell">—</div>
+          <div class="tile-sub">Giriş bekleyen + pozisyonda</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label">Son 24 saatte sinyal</div>
+          <div class="tile-value" id="t-24h">—</div>
+          <div class="tile-sub" id="t-24h-sub">Tüm zaman dilimleri</div>
+        </div>
+        <div class="tile">
+          <div class="tile-label">Yüklenen seri</div>
+          <div class="tile-value" id="t-loaded">—</div>
+          <div class="tile-sub" id="t-refresh">Otomatik yenileme</div>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="Filtreler">
+        <div class="seg" role="group" aria-label="Zaman dilimi" id="f-tf"></div>
+        <div class="seg" role="group" aria-label="Yön" id="f-dir">
+          <button type="button" data-v="all" aria-pressed="true">Tümü</button>
+          <button type="button" data-v="BUY" aria-pressed="false"><span class="up">▲</span> BUY</button>
+          <button type="button" data-v="SELL" aria-pressed="false"><span class="down">▼</span> SELL</button>
+        </div>
+        <label class="field-inline">
+          Görünüm
+          <select id="f-view">
+            <option value="all">Tüm coinler</option>
+            <option value="signals">Sinyali olanlar</option>
+            <option value="open">Açık pozisyonlar</option>
+            <option value="24h">Son 24 saat</option>
+          </select>
+        </label>
+        <div class="toggles">
+          <label class="switch" title="Fiyat yüksek dip + RSI düşük dip (BUY) / fiyat düşük tepe + RSI yüksek tepe (SELL)">
+            <input type="checkbox" id="opt-hidden" /><span>Gizli uyumsuzluk</span>
+          </label>
+          <label class="switch" title="BUY yalnızca fiyat EMA'nın üstündeyken, SELL yalnızca altındayken">
+            <input type="checkbox" id="opt-ema" /><span>EMA <span data-cfg="emaPeriod">200</span> filtresi</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card table-card">
+        <div class="table-wrap">
+          <table class="table cards" id="sig-table">
+            <caption class="sr-only">Coin ve zaman dilimi başına en son uyumsuzluk sinyali</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-sort="coin"><button type="button">Coin</button></th>
+                <th scope="col" data-sort="tf"><button type="button">TF</button></th>
+                <th scope="col" data-sort="dir"><button type="button">Yön</button></th>
+                <th scope="col" class="num">Giriş</th>
+                <th scope="col" class="num">SL</th>
+                <th scope="col" class="num">TP1</th>
+                <th scope="col" class="num">TP2</th>
+                <th scope="col" class="num">R:R</th>
+                <th scope="col" class="num" data-sort="score"><button type="button">Güç</button></th>
+                <th scope="col" data-sort="time"><button type="button">Sinyal zamanı</button></th>
+                <th scope="col" class="num" data-sort="price"><button type="button">Güncel fiyat</button></th>
+                <th scope="col" data-sort="status"><button type="button">Durum</button></th>
+              </tr>
+            </thead>
+            <tbody id="sig-body"></tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="table-count"></span>
+          <span>Satıra tıklayınca grafik açılır · Kapanmamış mum sinyal hesabına katılmaz</span>
+        </div>
+      </section>
+
+      <details class="card explain">
+        <summary>Strateji nasıl çalışıyor?</summary>
+        <div class="explain-body">
+          <ol>
+            <li>
+              <b>RSI</b>: Wilder yöntemi, periyot <span data-cfg="rsiPeriod">14</span>. <b>Pivot</b>: solda
+              <span data-cfg="pivotLeft">5</span>, sağda <span data-cfg="pivotRight">5</span> mum. Bir pivot ancak sağındaki
+              <span data-cfg="pivotRight">5</span> mum <em>kapandıktan sonra</em> onaylanır, yani geleceğe bakılmaz.
+            </li>
+            <li>
+              <b>Pozitif uyumsuzluk (BUY)</b>: fiyat daha düşük dip, RSI daha yüksek dip; ikinci dipte RSI &lt;
+              <span data-cfg="bullRsiMax">40</span>. <b>Negatif uyumsuzluk (SELL)</b>: fiyat daha yüksek tepe, RSI daha düşük
+              tepe; ikinci tepede RSI &gt; <span data-cfg="bearRsiMin">60</span>. İki pivot arası
+              <span data-cfg="minBars">5</span>–<span data-cfg="maxBars">60</span> mum.
+            </li>
+            <li>
+              <b>Giriş</b>: pivot onayından sonraki mumun açılışı. <b>SL</b>: BUY için son dip −
+              <span data-cfg="atrMult">0,5</span>×ATR(<span data-cfg="atrPeriod">14</span>), SELL için son tepe +
+              <span data-cfg="atrMult">0,5</span>×ATR. <b>TP1</b> = <span data-cfg="tp1R">1,5</span>R, <b>TP2</b> =
+              <span data-cfg="tp2R">3</span>R (R = giriş ile SL arası mesafe).
+            </li>
+            <li>
+              <b>Güç skoru (0–100)</b>: RSI farkı (40 puan), ATR cinsinden fiyat farkı (30 puan), EMA
+              <span data-cfg="emaPeriod">200</span> trend uyumu (30 puan).
+            </li>
+            <li>
+              <b>Durum</b>, sinyalden sonraki mumlar backtest ile aynı kurallarla işlenerek hesaplanır: TP1'de pozisyonun yarısı
+              kapanır ve stop girişe çekilir; aynı mumda hem stop hem hedef görülürse stop kabul edilir.
+            </li>
+          </ol>
+        </div>
+      </details>
+    </main>
+
+    <dialog id="chart-dialog" class="dialog" aria-labelledby="dlg-title">
+      <div class="dialog-head">
+        <div class="dialog-title">
+          <h2 id="dlg-title">Grafik</h2>
+          <span id="dlg-badges"></span>
+        </div>
+        <button class="icon-btn" type="button" id="dlg-close" aria-label="Kapat">✕</button>
+      </div>
+      <div class="dialog-body">
+        <div class="levels" id="dlg-levels"></div>
+        <div class="chart-legend" id="dlg-legend"></div>
+        <div class="chart-box" id="dlg-chart"></div>
+        <p class="chart-note">
+          <span class="swatch" style="background: #26a69a"></span>BUY uyumsuzluğu
+          <span class="swatch" style="background: #ef5350"></span>SELL uyumsuzluğu
+          <span class="swatch" style="background: #c98500"></span>EMA
+          <span class="swatch" style="background: #9085e9"></span>RSI · Kalın çizgiler seçili sinyal; yatay çizgiler giriş, SL, TP1 ve TP2.
+        </p>
+      </div>
+    </dialog>
+
+    <footer class="footer">
+      <p class="disclaimer">⚠ Bu site yatırım tavsiyesi değildir.</p>
+      <p>
+        Sinyaller geçmiş fiyat verisinden otomatik hesaplanır; geçmiş performans gelecekteki sonuçları garanti etmez. Kararlarınızı
+        kendi araştırmanızla verin.
+      </p>
+      <p>
+        Veri: <a href="https://www.okx.com/docs-v5/en/" rel="noopener" target="_blank">OKX Public API</a> · Grafikler:
+        <a href="https://www.tradingview.com/lightweight-charts/" rel="noopener" target="_blank">TradingView Lightweight Charts™</a>
+        · <a id="repo-link" href="#" rel="noopener" target="_blank">Kaynak kod</a>
+      </p>
+    </footer>
+
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"
+      integrity="sha384-KkYqTZlM13Zya6fVUF3IGCBOQ1ehFeJVVgxaVvD/0MebineF9EI8Jkd3NnWNChqN"
+      crossorigin="anonymous"
+    ></script>
+    <script defer src="js/config.js"></script>
+    <script defer src="js/indicators.js"></script>
+    <script defer src="js/divergence.js"></script>
+    <script defer src="js/signals.js"></script>
+    <script defer src="js/okx.js"></script>
+    <script defer src="js/ui.js"></script>
+  </body>
+</html>
