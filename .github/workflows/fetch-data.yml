@@ -1,0 +1,86 @@
+# YEDEK VERİ YÖNTEMİ
+# Tarayıcı OKX'e doğrudan ulaşamıyorsa (CORS / ağ engeli) kullanılır.
+# Her 15 dakikada OKX verisini çeker, data/ klasörüne JSON olarak yazar,
+# `data` dalına commit eder ve Pages'i yeniden yayınlar.
+#
+# Veri, main dalını şişirmemek için ayrı `data` dalında TEK commit olarak
+# tutulur (her çalışmada üzerine yazılır). Pages workflow'u yayında bu
+# dosyaları siteye /data olarak ekler.
+#
+# js/config.js → DATA_SOURCE 'direct' ise zamanlanmış çalışmalar hiçbir şey
+# yapmadan biter; 'static' veya 'auto' seçilince veri üretmeye başlar.
+# Elle çalıştırma (Actions → Run workflow) ayardan bağımsız her zaman çalışır.
+name: OKX verisini güncelle (yedek yöntem)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write # data dalına commit için
+  actions: write # Pages workflow'unu tetiklemek için
+
+concurrency:
+  group: fetch-data
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    name: Veriyi çek ve data dalına yaz
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Veri kaynağı ayarını oku (js/config.js)
+        id: cfg
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          SOURCE=$(node -p "require('./js/config.js').DATA_SOURCE")
+          echo "DATA_SOURCE = $SOURCE"
+          if [ "$SOURCE" = "direct" ] && [ "$EVENT" = "schedule" ]; then
+            echo "Doğrudan mod seçili; zamanlanmış güncelleme atlanıyor."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Önceki veriyi data dalından al (artımlı güncelleme için)
+        if: steps.cfg.outputs.run == 'true'
+        run: |
+          if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
+            git fetch --depth=1 origin data
+            git checkout FETCH_HEAD -- data
+          fi
+
+      - name: OKX'ten veri çek
+        if: steps.cfg.outputs.run == 'true'
+        run: node scripts/fetch-data.js
+
+      - name: data dalına commit et
+        if: steps.cfg.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tmp=$(mktemp -d)
+          cp -r data "$tmp/"
+          cd "$tmp"
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -q -m "data: OKX verisi $(date -u '+%Y-%m-%d %H:%M') UTC"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data:data
+
+      - name: Siteyi yeniden yayınla
+        if: steps.cfg.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

@@ -1,0 +1,8 @@
+node_modules/
+# Yedek veri betiğinin yerel çıktısı (GitHub'da ayrı `data` dalında tutulur)
+data/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

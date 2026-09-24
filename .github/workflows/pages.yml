@@ -1,0 +1,65 @@
+# Siteyi GitHub Pages'e yayınlar. Önce testler çalışır; geçerse yayınlanır.
+# Pages kaynağı: Settings → Pages → Build and deployment → Source: "GitHub Actions"
+name: GitHub Pages'e yayınla
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # fetch-data.yml de veri güncelleyince bunu tetikler
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Aynı anda tek yayın; sıradaki yayın iptal edilmez
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Testler
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Birim testleri (indicators, divergence, signals, backtest)
+        run: npm test
+
+  deploy:
+    name: Yayınla
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Site dosyalarını hazırla
+        run: |
+          mkdir -p _site
+          cp index.html backtest.html _site/
+          cp -r css js _site/
+          # Yedek yöntem kullanılıyorsa data dalındaki JSON dosyalarını da ekle
+          if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
+            git fetch --depth=1 origin data
+            git --work-tree=_site checkout FETCH_HEAD -- data
+            echo "data dalı eklendi: $(find _site/data -type f | wc -l) dosya"
+          else
+            echo "data dalı yok; site veriyi doğrudan OKX'ten okur."
+          fi
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - name: Yayınla
+        id: deployment
+        uses: actions/deploy-pages@v5
