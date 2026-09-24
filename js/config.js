@@ -38,7 +38,7 @@
     // COİNLER — USDT spot çiftleri (OKX instId: <COIN>-USDT)
     // ------------------------------------------------------------------
     QUOTE: 'USDT',
-    COINS: ['BTC', 'ETH', 'XRP', 'AVAX', 'SOL', 'BNB', 'DOGE', 'ADA', 'LINK', 'DOT', 'LTC', 'TRX', 'TON', 'NEAR', 'SUI'],
+    COINS: ['BTC', 'ETH', 'XRP', 'AVAX', 'SOL', 'BNB', 'DOGE', 'ADA', 'LINK', 'DOT', 'LTC', 'TRX', 'NEAR', 'SUI', 'CRV', 'AAVE', 'ATOM', 'WLD'],
 
     // ------------------------------------------------------------------
     // ZAMAN DİLİMLERİ

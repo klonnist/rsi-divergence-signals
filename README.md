@@ -20,7 +20,7 @@ stratejiyi geçmiş veriyle test eden tamamen statik bir kripto sinyal ve backte
 
 ### 1. Sinyal Paneli (`index.html`)
 
-- 15 coin × 3 zaman dilimi (15m, 4H, 1D) tablosu: Coin, TF, Yön, Giriş, SL, TP1, TP2, R:R, Güç skoru,
+- 18 coin × 3 zaman dilimi (15m, 4H, 1D) tablosu: Coin, TF, Yön, Giriş, SL, TP1, TP2, R:R, Güç skoru,
   Sinyal zamanı, Güncel fiyat, **Durum**.
 - **Durum** sütunu, sinyalden sonraki mumları backtest ile aynı kurallarla işler: *Giriş bekleniyor*,
   *Pozisyonda*, *TP1 alındı · açık*, *TP2 hedefi*, *Başa baş*, *Stop oldu* (gerçekleşen R ile).
@@ -89,7 +89,6 @@ DATA_SOURCE: 'direct',               // 'direct' | 'static' | 'auto'
 
 - **Coin eklemek/çıkarmak:** `COINS` listesini düzenleyin. Site açılışta her çiftin OKX'te listelenip
   işlem gördüğünü kontrol eder (`OKX.checkListings`); bulunamayanları uyarıyla atlar.
-  *Not: TON-USDT şu an OKX spot'ta listelenmediği için atlanıyor; OKX yeniden listelerse kendiliğinden devreye girer.*
 - **Strateji parametreleri:** `STRATEGY` hem panelin hem de backtest formunun varsayılanıdır.
   Sayfadaki açıklama metni de bu değerlerden otomatik doldurulur.
 - **Yenileme sıklığı:** `TIMEFRAMES[].refreshMs`.
