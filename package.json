@@ -1,0 +1,14 @@
+{
+  "name": "rsi-divergence-signals",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OKX verisiyle RSI pozitif/negatif uyumsuzluk sinyalleri ve backtest — build adımı olmayan statik site",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "fetch-data": "node scripts/fetch-data.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
