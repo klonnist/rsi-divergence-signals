@@ -403,48 +403,65 @@
     if (entry && (endMs < entry.from - tf.ms || startMs > entry.to + tf.ms)) entry = null;
     const lastClosable = Math.min(endMs, now - tf.ms); // kapanmış olabilecek son mumun açılışı
 
-    // Önbellekte olmayan aralıklar
+    // Önbellekte olmayan aralıklar. Önce yeni uç (tail), sonra eski uç (head): her aralık
+    // yeniden eskiye indirildiği için yarıda kesilen bir 'full'/'head' indirmesi de önbellekle
+    // bitişik kalır ve kaydedilebilir.
     const ranges = [];
-    if (!entry) ranges.push([startMs, endMs]);
+    if (!entry) ranges.push({ from: startMs, to: endMs, kind: 'full' });
     else {
-      if (startMs < entry.from) ranges.push([startMs, entry.from - 1]);
-      if (entry.to + tf.ms <= lastClosable) ranges.push([entry.to + 1, endMs]);
+      if (entry.to + tf.ms <= lastClosable) ranges.push({ from: entry.to + 1, to: endMs, kind: 'tail' });
+      if (startMs < entry.from) ranges.push({ from: startMs, to: entry.from - 1, kind: 'head' });
     }
 
     const per = CONFIG.HISTORY_LIMIT || 100;
-    const total = ranges.reduce((s, r) => s + estimatePages(tf, r[0], r[1]), 0);
+    const total = ranges.reduce((s, r) => s + estimatePages(tf, r.from, r.to), 0);
     let done = 0;
     report(done, total);
 
-    const fetched = [];
-    for (const [from, to] of ranges) {
-      let cursor = to + 1; // after=cursor → zaman damgası cursor'dan küçük mumlar
-      for (;;) {
-        const data = await okxGet(
-          '/api/v5/market/history-candles',
-          { instId: inst, bar: tf.okxBar, after: cursor, limit: per },
-          { lane: 'history', signal: opts.signal }
-        );
-        done++;
-        report(done, total);
-        if (!data.length) break;
-        for (const a of data) fetched.push(parseCandle(a));
-        const oldest = +data[data.length - 1][0];
-        if (oldest <= from || oldest >= cursor) break;
-        cursor = oldest;
+    // İndirilenleri önbelleğe işler. complete=false ise (iptal/hata) yalnızca bitişik kısım kaydedilir.
+    const save = (list, r, complete, oldest) => {
+      if (!complete && (r.kind === 'tail' || oldest == null)) return;
+      const candles = normalize((entry ? entry.candles : []).concat(list.filter((c) => c.confirmed)));
+      const newFrom = complete ? r.from : oldest;
+      const lastTime = candles.length ? candles[candles.length - 1].time : r.from - 1;
+      entry = {
+        from: entry && r.kind === 'tail' ? entry.from : Math.min(entry ? entry.from : Infinity, newFrom),
+        to: Math.max(entry ? entry.to : -Infinity, lastTime),
+        candles,
+      };
+      historyCache.set(key, entry);
+    };
+
+    for (const r of ranges) {
+      const got = [];
+      let cursor = r.to + 1; // after=cursor → zaman damgası cursor'dan küçük mumlar
+      let oldest = null;
+      try {
+        for (;;) {
+          const data = await okxGet(
+            '/api/v5/market/history-candles',
+            { instId: inst, bar: tf.okxBar, after: cursor, limit: per },
+            { lane: 'history', signal: opts.signal }
+          );
+          done++;
+          report(done, total);
+          if (!data.length) break;
+          for (const a of data) got.push(parseCandle(a));
+          const o = +data[data.length - 1][0];
+          if (oldest == null || o < oldest) oldest = o;
+          if (o <= r.from || o >= cursor) break;
+          cursor = o;
+        }
+      } catch (err) {
+        save(got, r, false, oldest); // iptal edilse de indirilen kısım boşa gitmesin
+        throw err;
       }
+      save(got, r, true, oldest);
     }
 
-    const merged = normalize((entry ? entry.candles : []).concat(fetched.filter((c) => c.confirmed)));
-    const lastTime = merged.length ? merged[merged.length - 1].time : startMs - 1;
-    entry = {
-      from: entry ? Math.min(entry.from, startMs) : startMs,
-      to: Math.max(entry ? entry.to : -Infinity, lastTime),
-      candles: merged,
-    };
-    historyCache.set(key, entry);
     report(total, total);
-    return merged.filter((c) => c.time >= startMs && c.time <= endMs);
+    const all = entry ? entry.candles : [];
+    return all.filter((c) => c.time >= startMs && c.time <= endMs);
   }
 
   const OKX = {
