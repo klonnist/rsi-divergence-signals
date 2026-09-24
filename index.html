@@ -144,7 +144,9 @@
               <b>Pozitif uyumsuzluk (BUY)</b>: fiyat daha düşük dip, RSI daha yüksek dip; ikinci dipte RSI &lt;
               <span data-cfg="bullRsiMax">40</span>. <b>Negatif uyumsuzluk (SELL)</b>: fiyat daha yüksek tepe, RSI daha düşük
               tepe; ikinci tepede RSI &gt; <span data-cfg="bearRsiMin">60</span>. İki pivot arası
-              <span data-cfg="minBars">5</span>–<span data-cfg="maxBars">60</span> mum.
+              <span data-cfg="minBars">5</span>–<span data-cfg="maxBars">60</span> mum. RSI'ın tepesi/dibi olarak fiyat
+              pivotunun ±<span data-cfg="rsiWindow">2</span> mum çevresindeki en uç RSI değeri alınır: fitilli bir pivot
+              mumunda RSI, fiyattan bir iki mum önce döner.
             </li>
             <li>
               <b>Giriş</b>: pivot onayından sonraki mumun açılışı. <b>SL</b>: BUY için son dip −

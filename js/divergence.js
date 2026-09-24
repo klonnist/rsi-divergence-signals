@@ -36,6 +36,30 @@
   }
 
   /**
+   * Bir fiyat pivotuna karşılık gelen RSI tepesi/dibi.
+   * RSI kapanışlarla hesaplanır; fiyat pivotu fitilli bir mumsa (yüksek fitil, düşük kapanış)
+   * RSI o mumda zaten dönmüş olur ve gerçek RSI tepesi bir iki mum öncedir. Bu yüzden pivotun
+   * ±window mum çevresindeki en uç RSI değeri alınır. Sağ sınır onay mumunu (pivot + right)
+   * geçmez → lookahead yok.
+   * @returns {{value:number|null, index:number}}
+   */
+  function rsiExtreme(rsi, i, window, right, isHigh) {
+    const from = Math.max(0, i - window);
+    const to = Math.min(rsi.length - 1, i + Math.min(window, right));
+    let value = null;
+    let index = -1;
+    for (let j = from; j <= to; j++) {
+      const v = rsi[j];
+      if (v == null) continue;
+      if (value == null || (isHigh ? v > value : v < value)) {
+        value = v;
+        index = j;
+      }
+    }
+    return { value, index };
+  }
+
+  /**
    * Ardışık iki pivot arasındaki uyumsuzlukları bulur.
    *
    *  Pozitif (BUY)  normal: fiyat daha düşük dip,  RSI daha yüksek dip, RSI2 < bullRsiMax
@@ -44,14 +68,15 @@
    *                 gizli : fiyat daha düşük tepe, RSI daha yüksek tepe
    *
    * İki pivot arası minBars–maxBars mum olmalıdır. Karşılaştırma her zaman bir
-   * önceki pivotla yapılır (swing dizisi bozulmaz).
+   * önceki pivotla yapılır (swing dizisi bozulmaz). Fiyat tarafında pivotun kendisi,
+   * RSI tarafında pivotun ±rsiWindow mum çevresindeki RSI tepesi/dibi kullanılır.
    *
    * @param {{high:number[], low:number[], rsi:(number|null)[]}} data
-   * @param {object} opts pivotLeft, pivotRight, minBars, maxBars, bullRsiMax, bearRsiMin, useHidden
+   * @param {object} opts pivotLeft, pivotRight, minBars, maxBars, bullRsiMax, bearRsiMin, useHidden, rsiWindow
    */
   function detect(data, opts) {
     const o = Object.assign(
-      { pivotLeft: 5, pivotRight: 5, minBars: 5, maxBars: 60, bullRsiMax: 40, bearRsiMin: 60, useHidden: false },
+      { pivotLeft: 5, pivotRight: 5, minBars: 5, maxBars: 60, bullRsiMax: 40, bearRsiMin: 60, useHidden: false, rsiWindow: 2 },
       opts
     );
     const pivotLows = findPivots(data.low, o.pivotLeft, o.pivotRight, 'low');
@@ -64,9 +89,11 @@
         const p2 = pivots[k];
         const dist = p2.index - p1.index;
         if (dist < o.minBars || dist > o.maxBars) continue;
-        const r1 = data.rsi[p1.index];
-        const r2 = data.rsi[p2.index];
-        if (r1 == null || r2 == null) continue;
+        if (data.rsi[p1.index] == null || data.rsi[p2.index] == null) continue; // RSI henüz ısınmadı
+        const e1 = rsiExtreme(data.rsi, p1.index, o.rsiWindow, o.pivotRight, !bullish);
+        const e2 = rsiExtreme(data.rsi, p2.index, o.rsiWindow, o.pivotRight, !bullish);
+        const r1 = e1.value;
+        const r2 = e2.value;
 
         let kind = null;
         if (bullish) {
@@ -87,6 +114,8 @@
           price2: p2.price,
           rsi1: r1,
           rsi2: r2,
+          rsiIndex1: e1.index, // RSI tepesinin/dibinin olduğu mum (grafikte çizgi buraya çizilir)
+          rsiIndex2: e2.index,
           confirmIndex: p2.confirmIndex,
         });
       }
@@ -99,7 +128,7 @@
     return { divergences, pivotLows, pivotHighs };
   }
 
-  const Divergence = { findPivots, detect };
+  const Divergence = { findPivots, rsiExtreme, detect };
 
   if (typeof module === 'object' && module.exports) module.exports = Divergence;
   root.Divergence = Divergence;

@@ -80,6 +80,10 @@
       maxBars: 60, // iki pivot arası en çok mum
       bullRsiMax: 40, // pozitif uyumsuzlukta ikinci dipte RSI bu değerin ALTINDA olmalı
       bearRsiMin: 60, // negatif uyumsuzlukta ikinci tepede RSI bu değerin ÜSTÜNDE olmalı
+      // RSI tepesi/dibi: fiyat pivotunun ±rsiWindow mum çevresindeki en uç RSI değeri.
+      // Fitilli pivot mumlarında RSI, fiyattan bir iki mum önce döner; 0 = yalnızca pivot mumu.
+      // pivotRight'tan büyük olsa da onay mumunu geçmez (lookahead yok).
+      rsiWindow: 2,
       useHidden: false, // gizli uyumsuzlukları da kullan
       useEmaFilter: false, // EMA trend filtresi (BUY yalnızca fiyat > EMA, SELL yalnızca fiyat < EMA)
       emaPeriod: 200,

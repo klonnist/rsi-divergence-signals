@@ -39,6 +39,9 @@ test('Rastgele seride sinyal üretilir ve seviyeler kurala uyar', () => {
       near(s.tp2, s.entry + (buy ? 1 : -1) * 3 * risk, 1e-9, 'TP2 = 3R');
     }
     assert.ok(s.score >= 0 && s.score <= 100, 'skor 0–100');
+    // RSI tepesi/dibi fiyat pivotunun ±2 mum çevresinde ve onay mumundan önce
+    assert.ok(Math.abs(s.rsiTime2 - s.time2) <= 2 * 900000 && s.rsiTime2 <= s.confirmTime, 'RSI tepesi penceresi');
+    assert.ok(Math.abs(s.rsiTime1 - s.time1) <= 2 * 900000, 'RSI tepesi penceresi (1)');
     assert.ok(s.i2 - s.i1 >= 5 && s.i2 - s.i1 <= 60, 'pivot mesafesi');
   }
   assert.ok(sigs.some((s) => s.type === 'BUY') && sigs.some((s) => s.type === 'SELL'), 'iki yön de görülmeli');

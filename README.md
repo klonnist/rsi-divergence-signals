@@ -56,6 +56,7 @@ Sinyal paneli ve backtest **aynı strateji fonksiyonunu** kullanır (`js/signals
 | Pivot | Solda 5, sağda 5 mum. Pivot **ancak sağdaki 5 mum kapandıktan sonra** onaylanır → lookahead yok |
 | Pozitif uyumsuzluk (BUY) | Fiyat daha düşük dip, RSI daha yüksek dip; ikinci dipte RSI < 40; iki pivot arası 5–60 mum |
 | Negatif uyumsuzluk (SELL) | Fiyat daha yüksek tepe, RSI daha düşük tepe; ikinci tepede RSI > 60 |
+| RSI tepesi / dibi | Fiyat pivotunun ±2 mum çevresindeki en yüksek / en düşük RSI (onay mumunu geçmez). RSI kapanışla hesaplandığı için fitilli bir pivot mumunda RSI tepesi bir iki mum önce oluşur; yalnızca pivot mumuna bakmak yanlış uyumsuzluk üretir |
 | Gizli uyumsuzluk (isteğe bağlı) | BUY: fiyat yüksek dip + RSI düşük dip · SELL: fiyat düşük tepe + RSI yüksek tepe |
 | EMA 200 filtresi (isteğe bağlı) | BUY yalnızca kapanış > EMA, SELL yalnızca kapanış < EMA (onay mumunda) |
 | Giriş | Pivot onayından sonraki mumun **açılışı** |
@@ -79,7 +80,7 @@ COINS: ['BTC', 'ETH', 'XRP', ...],   // USDT spot çiftleri (OKX instId: COIN-US
 TIMEFRAMES: [ { id: '15m', okxBar: '15m', refreshMs: 60000 }, ... ],
 STRATEGY: {
   rsiPeriod: 14, pivotLeft: 5, pivotRight: 5, minBars: 5, maxBars: 60,
-  bullRsiMax: 40, bearRsiMin: 60, useHidden: false, useEmaFilter: false,
+  bullRsiMax: 40, bearRsiMin: 60, rsiWindow: 2, useHidden: false, useEmaFilter: false,
   emaPeriod: 200, atrPeriod: 14, atrMult: 0.5, tp1R: 1.5, tp2R: 3,
 },
 BACKTEST: { initialCapital: 10000, riskPct: 1, commissionPct: 0.1, slippagePct: 0.05, maxLeverage: 3, exitMode: 'partial' },

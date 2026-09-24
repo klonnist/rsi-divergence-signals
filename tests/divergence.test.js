@@ -144,6 +144,41 @@ test('Gizli negatif uyumsuzluk: fiyat düşük tepe, RSI yüksek tepe', () => {
   assert.equal(on[0].kind, 'hidden');
 });
 
+test('Fitilli pivot: RSI tepesi bir mum önce ve daha yüksekse SELL üretilmez (TRX 4H vakası)', () => {
+  // Fiyat pivotu fitilli mum: kapanış düşük → RSI o mumda 62,9. Gerçek RSI tepesi bir mum önce 76,2 > 76,1
+  const fx = bearFixture({ r1: 76.1, r2: 62.9 });
+  fx.rsi[29] = 76.2;
+  assert.equal(Div.detect(fx, OPTS).divergences.length, 0);
+  // rsiWindow: 0 eski davranıştır (yalnızca pivot mumu) → yanlış uyumsuzluk üretirdi
+  assert.equal(Div.detect(fx, Object.assign({}, OPTS, { rsiWindow: 0 })).divergences.length, 1);
+});
+
+test('RSI tepesi pivotun yanındaki mumdaysa o değer kullanılır ve çizgi oraya bağlanır', () => {
+  const fx = bearFixture({ r1: 76.1, r2: 62.9 });
+  fx.rsi[29] = 70;
+  const { divergences } = Div.detect(fx, OPTS);
+  assert.equal(divergences.length, 1);
+  assert.equal(divergences[0].rsi2, 70);
+  assert.equal(divergences[0].rsiIndex2, 29);
+  assert.equal(divergences[0].rsiIndex1, 15);
+});
+
+test('Pozitif tarafta da RSI dibi pencereden alınır: RSI daha önce daha derin dip yaptıysa BUY yok', () => {
+  const fx = bullFixture({ r1: 30, r2: 35 });
+  fx.rsi[31] = 28; // pivottan bir mum sonra (onaydan önce) RSI 28 → daha yüksek dip değil
+  assert.equal(Div.detect(fx, OPTS).divergences.length, 0);
+});
+
+test('RSI penceresi onay mumunu geçmez (lookahead yok)', () => {
+  const opts = Object.assign({}, OPTS, { rsiWindow: 10 });
+  const after = bearFixture();
+  after.rsi[36] = 90; // onay mumundan (35) sonra: hesaba katılmamalı
+  assert.equal(Div.detect(after, opts).divergences.length, 1);
+  const inside = bearFixture();
+  inside.rsi[34] = 90; // onaydan önce, pencere içinde: RSI tepesi 90 → uyumsuzluk yok
+  assert.equal(Div.detect(inside, opts).divergences.length, 0);
+});
+
 test('RSI henüz hesaplanmamışsa (null) uyumsuzluk aranmaz', () => {
   const fx = bullFixture();
   fx.rsi[15] = null;

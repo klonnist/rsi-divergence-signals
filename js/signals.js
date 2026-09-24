@@ -26,6 +26,7 @@
     maxBars: 60,
     bullRsiMax: 40,
     bearRsiMin: 60,
+    rsiWindow: 2,
     useHidden: false,
     useEmaFilter: false,
     emaPeriod: 200,
@@ -125,6 +126,8 @@
         price2: d.price2,
         rsi1: d.rsi1,
         rsi2: d.rsi2,
+        rsiTime1: candles[d.rsiIndex1 >= 0 ? d.rsiIndex1 : d.i1].time, // RSI tepesi/dibi (fiyat pivotundan ±rsiWindow)
+        rsiTime2: candles[d.rsiIndex2 >= 0 ? d.rsiIndex2 : d.i2].time,
         confirmIndex: ci,
         confirmTime: candles[ci].time,
         entryIndex: ei,

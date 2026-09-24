@@ -900,9 +900,7 @@ input[aria-invalid='true'] {
   font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .level .s {
   color: var(--muted);

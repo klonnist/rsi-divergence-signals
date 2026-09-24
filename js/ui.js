@@ -463,12 +463,17 @@
               { time: sec(s.time1), value: s.price1 },
               { time: sec(s.time2), value: s.price2 },
             ]);
-          chart
-            .addSeries(LW.LineSeries, Object.assign({ priceFormat: priceFmt(1) }, style), 1)
-            .setData([
-              { time: sec(s.time1), value: s.rsi1 },
-              { time: sec(s.time2), value: s.rsi2 },
-            ]);
+          // RSI çizgisi RSI'ın kendi tepe/diplerine bağlanır (fiyat pivotundan ±rsiWindow mum)
+          const rt1 = sec(s.rsiTime1 != null ? s.rsiTime1 : s.time1);
+          const rt2 = sec(s.rsiTime2 != null ? s.rsiTime2 : s.time2);
+          if (times.has(rt1) && times.has(rt2)) {
+            chart
+              .addSeries(LW.LineSeries, Object.assign({ priceFormat: priceFmt(1) }, style), 1)
+              .setData([
+                { time: rt1, value: s.rsi1 },
+                { time: rt2, value: s.rsi2 },
+              ]);
+          }
         }
       },
       setMarkers(markers) {
@@ -1413,7 +1418,14 @@
         showProgress(100, 'Backtest hesaplanıyor…', '');
         await new Promise((r) => setTimeout(r, 30)); // arayüz bir kare çizebilsin
         const t0 = performance.now();
-        const result = Backtest.run({ series, startTime: startMs, endTime: endMs, strategy: v.st, settings: v.bt });
+        // Formda olmayan ayarlar (ör. atrPeriod, rsiWindow) config.js'ten gelir
+        const result = Backtest.run({
+          series,
+          startTime: startMs,
+          endTime: endMs,
+          strategy: Object.assign({}, CONFIG.STRATEGY, v.st),
+          settings: Object.assign({}, CONFIG.BACKTEST, v.bt),
+        });
         last = { v, tf, series, result, startMs, endMs, calcMs: performance.now() - t0 };
         if (notes.length) showAlert('bt-notes', 'warn', notes.join(' '));
         renderResults();
